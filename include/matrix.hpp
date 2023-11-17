@@ -149,39 +149,53 @@ namespace matrix {
         }
 
     private:
+        void fill_double_matrix(matrix_t<double>& matrix) const {
+            for (int i = 0; i < rows_; ++i) {
+                for (int j = 0; j < cols_; ++j) matrix[i][j] = data_[i][j];
+            }
+        }
+
+        int find_row_with_nonzero_first_elem(int start) {
+            int row = start;
+
+            while (row < rows_ && double_funcs::equal(data_[row][start], 0)) row++;
+
+            if (row != start && row != rows_) swap_rows(row, start);
+
+            return row;
+        }
+
+        void divide_row_by_first_elem(int i) {
+            for (int j = i + 1; j < cols_; ++j) data_[i][j] /= data_[i][i];
+
+            data_[i][i] = 1;
+        }
+
+        void subtract_rows_by_first_row(int i) {
+            for (int j = i + 1; j < rows_; ++j) {
+                    for (int k = i + 1; k < cols_; ++k) data_[j][k] -= (data_[i][k] * data_[j][i]);
+
+                    data_[j][i] = 0;
+                }
+        }
+
         double gauss_algorithm() const {
             matrix_t<double> matrix{cols_, rows_, NAN};
 
-            for (int i = 0; i < cols_; ++i) {
-                for (int j = 0; j < cols_; ++j) matrix[i][j] = data_[i][j];
-            }
+            fill_double_matrix(matrix);
 
             double det = 1.0;
 
             for (int i = 0; i < cols_ - 1; ++i) {
-                int row = i;
-                while (row < rows_ && double_funcs::equal(matrix[row][i], 0)) row++;
-
-                if (row == rows_) return 0;
-
-                if (row != i) { matrix.swap_rows(row, i); }
+                if (matrix.find_row_with_nonzero_first_elem(i) == rows_) return 0;
 
                 if (!double_funcs::equal(matrix[i][i], 1)) {
                     det *= matrix[i][i];
-
-                    for (int j = i + 1; j < cols_; ++j) matrix[i][j] /= matrix[i][i];
-
-                    matrix[i][i] = 1;
+                    matrix.divide_row_by_first_elem(i);
                 }
 
-                for (int j = i + 1; j < rows_; ++j) {
-                    for (int k = i + 1; k < cols_; ++k) matrix[j][k] -= (matrix[i][k] * matrix[j][i]);
-
-                    matrix[j][i] = 0;
-                }
-                matrix.dump(std::cout);
+                matrix.subtract_rows_by_first_row(i);
             }
-            matrix.dump(std::cout);
 
             return det * matrix[cols_ - 1][cols_ - 1];
         }
