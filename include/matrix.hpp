@@ -2,11 +2,20 @@
 
 #include <iostream>
 #include <utility>
+#include <iomanip>
 #include "exceptions.hpp"
 #include "double_funcs.hpp"
 
+
 namespace matrix {
-    template <typename T = int> class matrix_t final {
+    template <typename T = int> class matrix_t;
+
+    namespace detail {
+        void add_submatrix_koeff_row(matrix_t<double>& matrix, int row, int add_row, double koeff = 1.0);
+        int find_max_elem_submatrix_row(matrix_t<double>& matrix, int start);
+    }
+
+    template <typename T> class matrix_t final {
         T** data_;
         T* buffer_;
         int cols_, rows_;
@@ -134,7 +143,7 @@ namespace matrix {
         }
 
         T trace() const {
-            if (cols_ != rows_) { throw matrix_exceptions::MatrixIsNotSquare(); }
+            if (cols_ != rows_) throw matrix_exceptions::MatrixIsNotSquare();
 
             T ans = data_[0][0];
             for (int i = 1; i < cols_; ++i) ans += data_[i][i];
@@ -143,41 +152,24 @@ namespace matrix {
         }
 
         double determinant() const {
-            if (cols_ != rows_) { throw matrix_exceptions::MatrixIsNotSquare(); }
+            if (cols_ != rows_) throw matrix_exceptions::MatrixIsNotSquare();
 
             return gauss_algorithm();
         }
 
-    private:
         void fill_double_matrix(matrix_t<double>& matrix) const {
             for (int i = 0; i < rows_; ++i) {
                 for (int j = 0; j < cols_; ++j) matrix[i][j] = data_[i][j];
             }
         }
 
-        int find_row_with_nonzero_first_elem(int start) {
-            int row = start;
-
-            while (row < rows_ && double_funcs::equal(data_[row][start], 0)) row++;
-
-            if (row != start && row != rows_) swap_rows(row, start);
-
-            return row;
+        void swap_rows(int row1, int row2) {
+            T* tmp = data_[row1];
+            data_[row1] = data_[row2];
+            data_[row2] = tmp;
         }
 
-        void divide_row_by_first_elem(int i) {
-            for (int j = i + 1; j < cols_; ++j) data_[i][j] /= data_[i][i];
-
-            data_[i][i] = 1;
-        }
-
-        void subtract_rows_by_first_row(int i) {
-            for (int j = i + 1; j < rows_; ++j) {
-                    for (int k = i + 1; k < cols_; ++k) data_[j][k] -= (data_[i][k] * data_[j][i]);
-
-                    data_[j][i] = 0;
-                }
-        }
+    private:
 
         double gauss_algorithm() const {
             matrix_t<double> matrix{cols_, rows_, NAN};
@@ -187,23 +179,21 @@ namespace matrix {
             double det = 1.0;
 
             for (int i = 0; i < cols_ - 1; ++i) {
-                if (matrix.find_row_with_nonzero_first_elem(i) == rows_) return 0;
+                int max_elem_row = detail::find_max_elem_submatrix_row(matrix, i);
 
-                if (!double_funcs::equal(matrix[i][i], 1)) {
-                    det *= matrix[i][i];
-                    matrix.divide_row_by_first_elem(i);
+                if (double_funcs::equal(matrix[max_elem_row][i], 0)) return 0;
+                else if (max_elem_row != i) {
+                    matrix.swap_rows(max_elem_row, i);
+                    det *= -1;
                 }
 
-                matrix.subtract_rows_by_first_row(i);
+                for (int row = i + 1; row < rows_; ++row)
+                    detail::add_submatrix_koeff_row(matrix, row, i, -1 * matrix[row][i] / matrix[i][i]);
             }
 
-            return det * matrix[cols_ - 1][cols_ - 1];
-        }
+            for (int i = 0; i < rows_; ++i)  det *= matrix[i][i];
 
-        void swap_rows(int row1, int row2) {
-            T* tmp = data_[row1];
-            data_[row1] = data_[row2];
-            data_[row2] = tmp;
+            return det;
         }
 
     public:
@@ -235,7 +225,7 @@ namespace matrix {
         void dump(std::ostream& os) const {
             for (int i = 0; i < rows_; ++i) {
                 for (int j = 0; j < cols_; ++j) {
-                    os << data_[i][j] << " ";
+                    os << std::setw(9) << data_[i][j] << " ";
                 }
                 os << std::endl;
             }
@@ -260,4 +250,30 @@ namespace matrix {
         matrix_t<T> tmp{mtx1}; tmp += mtx2;
         return tmp;
     }
+
+namespace detail {
+
+    void add_submatrix_koeff_row(matrix_t<double>& matrix, int row, int add_row, double koeff) {
+        for (int i = add_row + 1, iend = matrix.ncols(); i < iend; ++i)
+            matrix[row][i] += koeff * matrix[add_row][i];
+
+        matrix[row][add_row] = 0;
+    }
+
+    int find_max_elem_submatrix_row(matrix_t<double>& matrix, int start) {
+        int i_max = start;
+        double max_elem = std::abs(matrix[start][start]), curr = NAN;
+
+        for (int i = start + 1, iend = matrix.nrows(); i < iend; ++i) {
+            curr = std::abs(matrix[i][start]);
+            if (max_elem < curr) {
+                i_max = i;
+                max_elem = curr;
+            }
+        }
+
+        return i_max;
+    }
+}
+
 }

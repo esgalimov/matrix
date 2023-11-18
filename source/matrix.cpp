@@ -19,7 +19,7 @@ int main() {
 
     for (int i = 0, iend = mtx_size * mtx_size; i < iend; ++i) {
         if (!(std::cin >> curr)) {
-            std::cerr << "Bad matrix elem" << std::endl;
+            std::cerr << "Bad matrix elem on pos = " << i << std::endl;
             return 1;
         }
         elem_vec.push_back(curr);
@@ -27,9 +27,15 @@ int main() {
 
     matrix_t<double> mtx{mtx_size, mtx_size, elem_vec.begin(), elem_vec.end()};
 
-    mtx.dump(std::cout);
+    //mtx.dump(std::cout);
 
-    std::cout << mtx.determinant() << std::endl;
+    try {
+        //printf("%.8lf", mtx.determinant());
+        std::cout << mtx.determinant() << std::endl;
+    }
+    catch (const matrix_exceptions::MatrixIsNotSquare& sq_mtx_exc) {
+        std::cerr << sq_mtx_exc.what() << std::endl;
+    }
 
     return 0;
 }
