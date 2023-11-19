@@ -8,4 +8,10 @@ namespace matrix_exceptions {
             return "Matrix must be square to call this method";
         }
     };
+
+    struct MatrixesAreNotSameSize : public std::exception {
+        const char* what() const noexcept override {
+            return "Matrixes must be same size";
+        }
+    };
 }

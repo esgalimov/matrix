@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(tree)
+project(matrix)
 
 set(CMAKE_CXX_STANDARD          17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,6 +13,16 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+find_package(GTest REQUIRED)
+enable_testing()
+
 add_executable(matrix ${CMAKE_CURRENT_SOURCE_DIR}/source/matrix.cpp)
+add_executable(matrix_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit_test/test.cpp)
+
+target_link_libraries(matrix_test PRIVATE ${GTEST_LIBRARIES})
+
+#add_executable(matrix_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit_test/test.cpp)
+#add_subdirectory(./tests/unit_test)
 
 target_include_directories(matrix PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(matrix_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

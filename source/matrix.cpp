@@ -30,7 +30,6 @@ int main() {
     //mtx.dump(std::cout);
 
     try {
-        //printf("%.8lf", mtx.determinant());
         std::cout << mtx.determinant() << std::endl;
     }
     catch (const matrix_exceptions::MatrixIsNotSquare& sq_mtx_exc) {

@@ -66,7 +66,17 @@ namespace matrix {
             }
         }
 
-        matrix_t(matrix_t&& matrix) : cols_(matrix.cols_), rows_(matrix.rows_),
+        template<typename U>
+        matrix_t(const matrix_t<U>& matrix) : cols_(matrix.ncols()), rows_(matrix.nrows()),
+            data_(new T*[matrix.nrows()]), buffer_(new T[matrix.nrows() * matrix.ncols()]) {
+            for (int i = 0; i < rows_; ++i) {
+                data_[i] = &buffer_[i * cols_];
+
+                for (int j = 0; j < cols_; ++j) data_[i][j] = matrix[i][j];
+            }
+        }
+
+        matrix_t(matrix_t&& matrix) noexcept : cols_(matrix.cols_), rows_(matrix.rows_),
             data_(matrix.data_), buffer_(matrix.buffer_) {
                 matrix.data_ = nullptr;
                 matrix.buffer_ = nullptr;
@@ -92,7 +102,7 @@ namespace matrix {
             return *this;
         }
 
-        matrix_t& operator=(matrix_t&& matrix) {
+        matrix_t& operator=(matrix_t&& matrix) noexcept {
             if (&matrix == this) return *this;
 
             cols_ = matrix.cols_; rows_ = matrix.rows_;
@@ -157,12 +167,6 @@ namespace matrix {
             return gauss_algorithm();
         }
 
-        void fill_double_matrix(matrix_t<double>& matrix) const {
-            for (int i = 0; i < rows_; ++i) {
-                for (int j = 0; j < cols_; ++j) matrix[i][j] = data_[i][j];
-            }
-        }
-
         void swap_rows(int row1, int row2) {
             T* tmp = data_[row1];
             data_[row1] = data_[row2];
@@ -172,9 +176,7 @@ namespace matrix {
     private:
 
         double gauss_algorithm() const {
-            matrix_t<double> matrix{cols_, rows_, NAN};
-
-            fill_double_matrix(matrix);
+            matrix_t<double> matrix{*this};
 
             double det = 1.0;
 
@@ -207,12 +209,17 @@ namespace matrix {
         }
 
         matrix_t& operator+=(const matrix_t& matrix) {
+            if (cols_ != matrix.ncols() || rows_ != matrix.nrows())
+                throw matrix_exceptions::MatrixesAreNotSameSize();
+
             for (int i = 0; i < rows_; ++i)
                 for (int j = 0; j < cols_; ++j) data_[i][j] += matrix.data_[i][j];
             return *this;
         }
 
         bool operator==(const matrix_t& matrix) const {
+            if (cols_ != matrix.ncols() || rows_ != matrix.nrows()) return false;
+
             for (int i = 0; i < rows_; ++i)
                 for (int j = 0; j < cols_; ++j)
                     if (!double_funcs::equal(data_[i][j], matrix.data_[i][j])) return false;
