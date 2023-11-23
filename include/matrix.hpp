@@ -3,6 +3,7 @@
 #include <iostream>
 #include <utility>
 #include <iomanip>
+#include <type_traits>
 #include "exceptions.hpp"
 #include "double_funcs.hpp"
 
@@ -15,10 +16,57 @@ namespace matrix {
         int find_max_elem_submatrix_row(matrix_t<double>& matrix, int start);
     }
 
-    template <typename T> class matrix_t final {
+
+    template <typename T> class matrix_buffer_t {
+    protected:
+        T*  buffer_;
         T** data_;
-        T* buffer_;
-        int cols_, rows_;
+        size_t cols_, rows_;
+
+        matrix_buffer_t(const matrix_buffer_t&)            = delete;
+        matrix_buffer_t& operator=(const matrix_buffer_t&) = delete;
+
+        matrix_buffer_t(matrix_buffer_t&& rhs) noexcept :
+            buffer_(rhs.buffer_), data_(rhs.data_),  cols_(rhs.cols_), rows_(rhs.rows_) {
+                rhs.buffer_ = nullptr;
+                rhs.data_ = nullptr;
+                rhs.cols_ = 0;
+                rhs.rows_ = 0;
+            }
+
+        matrix_buffer_t& operator=(matrix_buffer_t&& rhs) noexcept {
+            std::swap(buffer_, rhs.buffer_);
+            std::swap(data_, rhs.data_);
+            std::swap(cols_, rhs.cols_);
+            std::swap(rows_, rhs.rows_);
+
+            return *this;
+        }
+
+        matrix_buffer_t(size_t cols = 0, size_t rows = 0) :
+            buffer_((cols * rows == 0) ? nullptr : static_cast<T*> (::operator new(sizeof(T)  * cols * rows))),
+              data_((cols * rows == 0) ? nullptr : static_cast<T**>(::operator new(sizeof(T*) * rows))),
+            cols_(cols), rows_(rows) {
+
+            if (cols_ * rows_ != 0)
+                for (int i = 0; i < rows_; ++i)
+                    data_[i] = &buffer_[i * cols_];
+        }
+
+        ~matrix_buffer_t() {
+            ::operator delete(buffer_);
+            ::operator delete(data_);
+        }
+    };
+
+
+    template <typename T> class matrix_t final : private matrix_buffer_t<T>  {
+        static_assert(std::is_arithmetic<T>(), "Must be arithmetic type in matrix");
+
+        using matrix_buffer_t<T>::buffer_;
+        using matrix_buffer_t<T>::data_;
+        using matrix_buffer_t<T>::cols_;
+        using matrix_buffer_t<T>::rows_;
 
         class proxy_row_t {
             T* row_ = nullptr;
@@ -30,94 +78,52 @@ namespace matrix {
         };
 
     public:
-        matrix_t(int cols = 1, int rows = 1, T val = T{}) : cols_(cols), rows_(rows),
-            data_(new T*[rows]), buffer_(new T[rows * cols]) {
-            for (int i = 0; i < rows; ++i) {
-                data_[i] = &buffer_[i * cols];
-
+        matrix_t(int cols = 1, int rows = 1, T val = T{}) : matrix_buffer_t<T>(cols, rows) {
+            for (int i = 0; i < rows; ++i)
                 for (int j = 0; j < cols; ++j) data_[i][j] = val;
-            }
-
         }
 
         template<typename It>
-        matrix_t(int cols, int rows, It start, It fin) : cols_(cols), rows_(rows),
-            data_(new T*[rows]), buffer_(new T[rows * cols]) {
-
+        matrix_t(int cols, int rows, It start, It fin) : matrix_buffer_t<T>(cols, rows) {
             for (int i = 0; i < rows; ++i) {
-                data_[i] = &buffer_[i * cols];
-
                 for (int j = 0; j < cols; ++j) {
                     if (start != fin) {
                         data_[i][j] = *start;
                         start++;
                     }
-                    else data_[i][j] = 0;
+                    else data_[i][j] = T{};
                 }
             }
         }
 
-        matrix_t(const matrix_t& matrix) : cols_(matrix.cols_), rows_(matrix.rows_),
-            data_(new T*[matrix.rows_]), buffer_(new T[matrix.rows_ * matrix.cols_]) {
+        matrix_t(const matrix_t& matrix) : matrix_buffer_t<T>(matrix.cols_, matrix.rows_) {
             for (int i = 0; i < rows_; ++i) {
-                data_[i] = &buffer_[i * cols_];
-
                 for (int j = 0; j < cols_; ++j) data_[i][j] = matrix.data_[i][j];
             }
         }
 
         template<typename U>
-        matrix_t(const matrix_t<U>& matrix) : cols_(matrix.ncols()), rows_(matrix.nrows()),
-            data_(new T*[matrix.nrows()]), buffer_(new T[matrix.nrows() * matrix.ncols()]) {
-            for (int i = 0; i < rows_; ++i) {
-                data_[i] = &buffer_[i * cols_];
-
-                for (int j = 0; j < cols_; ++j) data_[i][j] = matrix[i][j];
-            }
+        matrix_t(const matrix_t<U>& matrix) : matrix_buffer_t<T>(matrix.ncols(), matrix.nrows()) {
+            for (int i = 0; i < rows_; ++i)
+                for (int j = 0; j < cols_; ++j)
+                    data_[i][j] = static_cast<T>(matrix[i][j]);
         }
 
-        matrix_t(matrix_t&& matrix) noexcept : cols_(matrix.cols_), rows_(matrix.rows_),
-            data_(matrix.data_), buffer_(matrix.buffer_) {
-                matrix.data_ = nullptr;
-                matrix.buffer_ = nullptr;
-            }
-
-        ~matrix_t() { delete [] buffer_; delete [] data_; }
+        matrix_t(matrix_t&& matrix)            = default;
+        matrix_t& operator=(matrix_t&& matrix) = default;
 
         matrix_t& operator=(const matrix_t& matrix) {
-            if (&matrix == this) return *this;
-
-            delete[] data_; delete[] buffer_;
-
-            cols_ = matrix.cols_;
-            rows_ = matrix.rows_;
-            data_ = new T*[rows_];
-            buffer_ = new T[rows_ * cols_];
-
-            for (int i = 0; i < rows_; ++i) {
-                data_[i] = &buffer_[i * cols_];
-
-                for (int j = 0; j < cols_; ++j) data_[i][j] = matrix.data_[i][j];
-            }
+            matrix_t tmp(matrix);
+            std::swap(*this, tmp);
             return *this;
         }
 
-        matrix_t& operator=(matrix_t&& matrix) noexcept {
-            if (&matrix == this) return *this;
-
-            cols_ = matrix.cols_; rows_ = matrix.rows_;
-            std::swap(data_, matrix.data_);
-            std::swap(buffer_, matrix.buffer_);
-
-            return *this;
-        }
 
         static matrix_t eye(int n = 1) {
             matrix_t mtx{n, n, 0};
 
-            for (int i = 0; i < n; ++i) {
-                mtx.data_[i][i] = 1;
-            }
+            for (int i = 0; i < n; ++i) mtx.data_[i][i] = 1;
+
             return mtx;
         }
 
@@ -130,7 +136,7 @@ namespace matrix {
             return *this;
         }
 
-        matrix_t& transpose() & {
+        matrix_t& transpose() & { //cringe - change this shit
             T** new_data = new T*[cols_];
             T*  new_buffer = new T[cols_ * rows_];
 
