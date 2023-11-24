@@ -4,6 +4,12 @@
 
 using namespace matrix;
 
+// TEST(ctor_test, null_data_test) {
+//     matrix_t<int> matrix{0, 0};
+//
+//
+// }
+
 TEST(ctor_test, basic_ctor_test) {
     matrix_t<int> matrix{2, 3, 1};
 

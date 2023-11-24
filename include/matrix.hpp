@@ -43,14 +43,19 @@ namespace matrix {
             return *this;
         }
 
-        matrix_buffer_t(size_t cols = 0, size_t rows = 0) :
-            buffer_((cols * rows == 0) ? nullptr : static_cast<T*> (::operator new(sizeof(T)  * cols * rows))),
-              data_((cols * rows == 0) ? nullptr : static_cast<T**>(::operator new(sizeof(T*) * rows))),
-            cols_(cols), rows_(rows) {
+        matrix_buffer_t(size_t cols = 0, size_t rows = 0) : cols_(cols), rows_(rows) {
+            if (cols_ * rows_ == 0) throw matrix_exceptions::MatrixZeroColsOrRows();
 
-            if (cols_ * rows_ != 0)
-                for (int i = 0; i < rows_; ++i)
-                    data_[i] = &buffer_[i * cols_];
+            buffer_ = static_cast<T*> (::operator new(sizeof(T)  * cols * rows));
+            data_   = static_cast<T**>(::operator new(sizeof(T*) * rows, std::nothrow));
+
+            if (data_ == nullptr) {
+                ::operator delete(buffer_);
+                throw std::bad_alloc();
+            }
+
+            for (int i = 0; i < rows_; ++i)
+                data_[i] = &buffer_[i * cols_];
         }
 
         ~matrix_buffer_t() {
@@ -70,11 +75,18 @@ namespace matrix {
 
         class proxy_row_t {
             T* row_ = nullptr;
+            size_t cols_;
             public:
-                proxy_row_t(T* row) : row_(row) {}
+                proxy_row_t(T* row, size_t cols) : row_(row), cols_(cols) {}
 
-                const T& operator[](int col) const { return row_[col]; }
-                      T& operator[](int col)       { return row_[col]; }
+                const T& operator[](size_t col) const {
+                    if (col >= cols_) throw matrix_exceptions::MatrixOutOfRange();
+                    return row_[col];
+                }
+                T& operator[](size_t col) {
+                    if (col >= cols_) throw matrix_exceptions::MatrixOutOfRange();
+                    return row_[col];
+                }
         };
 
     public:
@@ -136,25 +148,14 @@ namespace matrix {
             return *this;
         }
 
-        matrix_t& transpose() & { //cringe - change this shit
-            T** new_data = new T*[cols_];
-            T*  new_buffer = new T[cols_ * rows_];
+        matrix_t& transpose() & {
+            matrix_t tmp(rows_, cols_);
 
-            for (int i = 0; i < cols_; ++i) new_data[i] = &new_buffer[i * rows_];
+            for (int i = 0; i < cols_; ++i)
+                for (int j = 0; j < rows_; ++j)
+                    tmp.data_[i][j] = data_[j][i];
 
-            for (int i = 0; i < rows_; ++i) {
-                for (int j = 0; j < cols_; ++j) new_data[j][i] = data_[i][j];
-            }
-            delete[] buffer_;
-            delete[] data_;
-
-            data_ = new_data;
-            buffer_ = new_buffer;
-
-            int tmp = cols_;
-            cols_ = rows_;
-            rows_ = tmp;
-
+            std::swap(*this, tmp);
             return *this;
         }
 
@@ -233,7 +234,10 @@ namespace matrix {
             return true;
         }
 
-        proxy_row_t operator[](int row) const { return proxy_row_t{data_[row]}; }
+        proxy_row_t operator[](size_t row) const {
+            if (row >= rows_) throw matrix_exceptions::MatrixOutOfRange();
+            return proxy_row_t{data_[row], cols_};
+        }
 
         void dump(std::ostream& os) const {
             for (int i = 0; i < rows_; ++i) {
