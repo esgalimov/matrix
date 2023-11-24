@@ -5,7 +5,7 @@
 using namespace matrix;
 
 int main() {
-    int mtx_size = 0;
+    size_t mtx_size = 0;
 
     if (!(std::cin >> mtx_size)) {
         std::cerr << "Bad matrix size" << std::endl;

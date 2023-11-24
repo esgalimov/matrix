@@ -4,11 +4,6 @@
 
 using namespace matrix;
 
-// TEST(ctor_test, null_data_test) {
-//     matrix_t<int> matrix{0, 0};
-//
-//
-// }
 
 TEST(ctor_test, basic_ctor_test) {
     matrix_t<int> matrix{2, 3, 1};
@@ -17,8 +12,17 @@ TEST(ctor_test, basic_ctor_test) {
     ASSERT_EQ(3, matrix.nrows());
 
     for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 2; ++j)
+        for (int j = 0; j < 2; ++j) {
+            ASSERT_NO_THROW(matrix[i][j]);
             ASSERT_EQ(1, matrix[i][j]);
+        }
+
+    ASSERT_THROW(matrix[3][1], matrix_exceptions::MatrixOutOfRange);
+    ASSERT_THROW(matrix[2][2], matrix_exceptions::MatrixOutOfRange);
+}
+
+TEST(ctor_test, zero_cols_rows_test) {
+    ASSERT_THROW((matrix_t<int>{5, 0}), matrix_exceptions::MatrixZeroColsOrRows);
 }
 
 TEST(ctor_test, iterator_test) {
@@ -161,6 +165,25 @@ TEST(operator_test, num_mult_test) {
             ASSERT_EQ(matrix1[i][j] * 5, matrix2[i][j]);
             ASSERT_EQ(matrix1[i][j] * 4, matrix3[i][j]);
     }
+}
+
+TEST(operator_test, multiply_test) {
+    std::vector<int> vec1 = {1, 2, 3, 4, 5, 6},
+                     vec2 = {1, -1, -1, 1};
+    matrix_t<int> matrix1{2, 3, vec1.begin(), vec1.end()},
+                  matrix2{2, 2, vec2.begin(), vec2.end()};
+
+    ASSERT_NO_THROW(matrix1.multiply(matrix2));
+
+    ASSERT_EQ(2, matrix1.ncols());
+    ASSERT_EQ(3, matrix1.nrows());
+
+    for (int i = 0; i < 3; ++i) ASSERT_EQ(-1, matrix1[i][0]);
+    for (int i = 0; i < 3; ++i) ASSERT_EQ(1,  matrix1[i][1]);
+
+    matrix2 = matrix_t<int>{3, 3};
+
+    ASSERT_THROW(matrix1.multiply(matrix2), matrix_exceptions::MatrixesCannotBeMultiplied);
 }
 
 TEST(operator_test, equal_test) {

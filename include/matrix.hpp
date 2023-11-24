@@ -12,8 +12,8 @@ namespace matrix {
     template <typename T = int> class matrix_t;
 
     namespace detail {
-        void add_submatrix_koeff_row(matrix_t<double>& matrix, int row, int add_row, double koeff = 1.0);
-        int find_max_elem_submatrix_row(matrix_t<double>& matrix, int start);
+        void add_submatrix_koeff_row(matrix_t<double>& matrix, size_t row, size_t add_row, double koeff = 1.0);
+        size_t find_max_elem_submatrix_row(matrix_t<double>& matrix, size_t start);
     }
 
 
@@ -54,7 +54,7 @@ namespace matrix {
                 throw std::bad_alloc();
             }
 
-            for (int i = 0; i < rows_; ++i)
+            for (size_t i = 0; i < rows_; ++i)
                 data_[i] = &buffer_[i * cols_];
         }
 
@@ -90,15 +90,15 @@ namespace matrix {
         };
 
     public:
-        matrix_t(int cols = 1, int rows = 1, T val = T{}) : matrix_buffer_t<T>(cols, rows) {
-            for (int i = 0; i < rows; ++i)
-                for (int j = 0; j < cols; ++j) data_[i][j] = val;
+        matrix_t(size_t cols = 1, size_t rows = 1, T val = T{}) : matrix_buffer_t<T>(cols, rows) {
+            for (size_t i = 0; i < rows; ++i)
+                for (size_t j = 0; j < cols; ++j) data_[i][j] = val;
         }
 
         template<typename It>
-        matrix_t(int cols, int rows, It start, It fin) : matrix_buffer_t<T>(cols, rows) {
-            for (int i = 0; i < rows; ++i) {
-                for (int j = 0; j < cols; ++j) {
+        matrix_t(size_t cols, size_t rows, It start, It fin) : matrix_buffer_t<T>(cols, rows) {
+            for (size_t i = 0; i < rows; ++i) {
+                for (size_t j = 0; j < cols; ++j) {
                     if (start != fin) {
                         data_[i][j] = *start;
                         start++;
@@ -109,15 +109,15 @@ namespace matrix {
         }
 
         matrix_t(const matrix_t& matrix) : matrix_buffer_t<T>(matrix.cols_, matrix.rows_) {
-            for (int i = 0; i < rows_; ++i) {
-                for (int j = 0; j < cols_; ++j) data_[i][j] = matrix.data_[i][j];
+            for (size_t i = 0; i < rows_; ++i) {
+                for (size_t j = 0; j < cols_; ++j) data_[i][j] = matrix.data_[i][j];
             }
         }
 
         template<typename U>
         matrix_t(const matrix_t<U>& matrix) : matrix_buffer_t<T>(matrix.ncols(), matrix.nrows()) {
-            for (int i = 0; i < rows_; ++i)
-                for (int j = 0; j < cols_; ++j)
+            for (size_t i = 0; i < rows_; ++i)
+                for (size_t j = 0; j < cols_; ++j)
                     data_[i][j] = static_cast<T>(matrix[i][j]);
         }
 
@@ -131,17 +131,17 @@ namespace matrix {
         }
 
 
-        static matrix_t eye(int n = 1) {
+        static matrix_t eye(size_t n = 1) {
             matrix_t mtx{n, n, 0};
 
-            for (int i = 0; i < n; ++i) mtx.data_[i][i] = 1;
+            for (size_t i = 0; i < n; ++i) mtx.data_[i][i] = 1;
 
             return mtx;
         }
 
         matrix_t& negate() & {
-            for (int i = 0; i < rows_; ++i) {
-                for (int j = 0; j < cols_; ++j) {
+            for (size_t i = 0; i < rows_; ++i) {
+                for (size_t j = 0; j < cols_; ++j) {
                     data_[i][j] *= -1;
                 }
             }
@@ -151,11 +151,32 @@ namespace matrix {
         matrix_t& transpose() & {
             matrix_t tmp(rows_, cols_);
 
-            for (int i = 0; i < cols_; ++i)
-                for (int j = 0; j < rows_; ++j)
+            for (size_t i = 0; i < cols_; ++i)
+                for (size_t j = 0; j < rows_; ++j)
                     tmp.data_[i][j] = data_[j][i];
 
             std::swap(*this, tmp);
+            return *this;
+        }
+
+        matrix_t& multiply(const matrix_t& matrix) & {
+            if (cols_ != matrix.nrows())
+                throw matrix_exceptions::MatrixesCannotBeMultiplied();
+
+            matrix_t tmp(matrix.ncols(), rows_);
+
+            for (size_t i = 0, iend = tmp.nrows(); i < iend; ++i)
+                for (size_t j = 0, jend = tmp.ncols(); j < jend; ++j) {
+                    T elem = 0;
+
+                    for (size_t k = 0; k < cols_; ++k)
+                        elem += data_[i][k] * matrix[k][j];
+
+                    tmp[i][j] = elem;
+                }
+
+            std::swap(*this, tmp);
+
             return *this;
         }
 
@@ -163,7 +184,7 @@ namespace matrix {
             if (cols_ != rows_) throw matrix_exceptions::MatrixIsNotSquare();
 
             T ans = data_[0][0];
-            for (int i = 1; i < cols_; ++i) ans += data_[i][i];
+            for (size_t i = 1; i < cols_; ++i) ans += data_[i][i];
 
             return ans;
         }
@@ -174,7 +195,7 @@ namespace matrix {
             return gauss_algorithm();
         }
 
-        void swap_rows(int row1, int row2) {
+        void swap_rows(size_t row1, size_t row2) {
             T* tmp = data_[row1];
             data_[row1] = data_[row2];
             data_[row2] = tmp;
@@ -187,8 +208,8 @@ namespace matrix {
 
             double det = 1.0;
 
-            for (int i = 0; i < cols_ - 1; ++i) {
-                int max_elem_row = detail::find_max_elem_submatrix_row(matrix, i);
+            for (size_t i = 0; i < cols_ - 1; ++i) {
+                size_t max_elem_row = detail::find_max_elem_submatrix_row(matrix, i);
 
                 if (double_funcs::equal(matrix[max_elem_row][i], 0)) return 0;
                 else if (max_elem_row != i) {
@@ -196,22 +217,22 @@ namespace matrix {
                     det *= -1;
                 }
 
-                for (int row = i + 1; row < rows_; ++row)
+                for (size_t row = i + 1; row < rows_; ++row)
                     detail::add_submatrix_koeff_row(matrix, row, i, -1 * matrix[row][i] / matrix[i][i]);
             }
 
-            for (int i = 0; i < rows_; ++i)  det *= matrix[i][i];
+            for (size_t i = 0; i < rows_; ++i)  det *= matrix[i][i];
 
             return det;
         }
 
     public:
-        int ncols() const { return cols_; }
-        int nrows() const { return rows_; }
+        size_t ncols() const { return cols_; }
+        size_t nrows() const { return rows_; }
 
         matrix_t& operator*=(T num) {
-            for (int i = 0; i < rows_; ++i)
-                for (int j = 0; j < cols_; ++j) data_[i][j] *= num;
+            for (size_t i = 0; i < rows_; ++i)
+                for (size_t j = 0; j < cols_; ++j) data_[i][j] *= num;
             return *this;
         }
 
@@ -219,16 +240,16 @@ namespace matrix {
             if (cols_ != matrix.ncols() || rows_ != matrix.nrows())
                 throw matrix_exceptions::MatrixesAreNotSameSize();
 
-            for (int i = 0; i < rows_; ++i)
-                for (int j = 0; j < cols_; ++j) data_[i][j] += matrix.data_[i][j];
+            for (size_t i = 0; i < rows_; ++i)
+                for (size_t j = 0; j < cols_; ++j) data_[i][j] += matrix.data_[i][j];
             return *this;
         }
 
         bool operator==(const matrix_t& matrix) const {
             if (cols_ != matrix.ncols() || rows_ != matrix.nrows()) return false;
 
-            for (int i = 0; i < rows_; ++i)
-                for (int j = 0; j < cols_; ++j)
+            for (size_t i = 0; i < rows_; ++i)
+                for (size_t j = 0; j < cols_; ++j)
                     if (!double_funcs::equal(data_[i][j], matrix.data_[i][j])) return false;
 
             return true;
@@ -240,8 +261,8 @@ namespace matrix {
         }
 
         void dump(std::ostream& os) const {
-            for (int i = 0; i < rows_; ++i) {
-                for (int j = 0; j < cols_; ++j) {
+            for (size_t i = 0; i < rows_; ++i) {
+                for (size_t j = 0; j < cols_; ++j) {
                     os << std::setw(9) << data_[i][j] << " ";
                 }
                 os << std::endl;
@@ -270,18 +291,18 @@ namespace matrix {
 
 namespace detail {
 
-    void add_submatrix_koeff_row(matrix_t<double>& matrix, int row, int add_row, double koeff) {
-        for (int i = add_row + 1, iend = matrix.ncols(); i < iend; ++i)
+    void add_submatrix_koeff_row(matrix_t<double>& matrix, size_t row, size_t add_row, double koeff) {
+        for (size_t i = add_row + 1, iend = matrix.ncols(); i < iend; ++i)
             matrix[row][i] += koeff * matrix[add_row][i];
 
         matrix[row][add_row] = 0;
     }
 
-    int find_max_elem_submatrix_row(matrix_t<double>& matrix, int start) {
-        int i_max = start;
+    size_t find_max_elem_submatrix_row(matrix_t<double>& matrix, size_t start) {
+        size_t i_max = start;
         double max_elem = std::abs(matrix[start][start]), curr = NAN;
 
-        for (int i = start + 1, iend = matrix.nrows(); i < iend; ++i) {
+        for (size_t i = start + 1, iend = matrix.nrows(); i < iend; ++i) {
             curr = std::abs(matrix[i][start]);
             if (max_elem < curr) {
                 i_max = i;

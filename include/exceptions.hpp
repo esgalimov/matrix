@@ -11,6 +11,10 @@ namespace matrix_exceptions {
         MatrixesAreNotSameSize() : std::runtime_error("Matrixes must be same size") {}
     };
 
+    struct MatrixesCannotBeMultiplied : public std::runtime_error {
+        MatrixesCannotBeMultiplied() : std::runtime_error("Matrixes with these sizes cannot be multiplied") {}
+    };
+
     struct MatrixZeroColsOrRows : public std::runtime_error {
         MatrixZeroColsOrRows() : std::runtime_error("Matrix has cols_ = 0 or rows_ = 0") {}
     };
