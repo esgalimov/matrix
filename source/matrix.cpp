@@ -1,43 +1,27 @@
-#include <iostream>
-#include <vector>
 #include "matrix.hpp"
 
-using namespace matrix;
+namespace matrix {
+    namespace detail {
 
-int main() {
-    size_t mtx_size = 0;
+    void add_submatrix_koeff_row(matrix_t<double>& matrix, size_t row, size_t add_row, double koeff) {
+        for (size_t i = add_row + 1, iend = matrix.ncols(); i < iend; ++i)
+            matrix[row][i] += koeff * matrix[add_row][i];
 
-    if (!(std::cin >> mtx_size)) {
-        std::cerr << "Bad matrix size" << std::endl;
-        return 1;
+        matrix[row][add_row] = 0;
     }
 
-    std::vector<double> elem_vec;
-    elem_vec.reserve(mtx_size * mtx_size);
+    size_t find_max_elem_submatrix_row(matrix_t<double>& matrix, size_t start) {
+        size_t i_max = start;
+        double max_elem = std::abs(matrix[start][start]), curr = NAN;
 
-    double curr = NAN;
-
-    for (int i = 0, iend = mtx_size * mtx_size; i < iend; ++i) {
-        if (!(std::cin >> curr)) {
-            std::cerr << "Bad matrix elem on pos = " << i << std::endl;
-            return 1;
+        for (size_t i = start + 1, iend = matrix.nrows(); i < iend; ++i) {
+            curr = std::abs(matrix[i][start]);
+            if (max_elem < curr) {
+                i_max = i;
+                max_elem = curr;
+            }
         }
-        elem_vec.push_back(curr);
+        return i_max;
     }
-
-    matrix_t<double> mtx{mtx_size, mtx_size, elem_vec.begin(), elem_vec.end()};
-
-    //mtx.dump(std::cout);
-
-    try {
-        std::cout << mtx.determinant() << std::endl;
     }
-    catch (std::bad_alloc&) {
-        std::cerr << "Allocation failed" << std::endl;
-    }
-    catch (const std::runtime_error& mtx_exc) {
-        std::cerr << mtx_exc.what() << std::endl;
-    }
-
-    return 0;
 }
