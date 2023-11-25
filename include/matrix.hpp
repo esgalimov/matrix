@@ -116,7 +116,7 @@ namespace matrix {
             }
         }
 
-        template<typename U>
+        template<typename U> explicit
         matrix_t(const matrix_t<U>& matrix) : matrix_buffer_t<T>(matrix.ncols(), matrix.nrows()) {
             for (size_t i = 0; i < rows_; ++i)
                 for (size_t j = 0; j < cols_; ++j)
@@ -234,8 +234,12 @@ namespace matrix {
         size_t nrows() const { return rows_; }
 
         matrix_t& operator*=(T num) {
+            matrix_t tmp(*this);
+
             for (size_t i = 0; i < rows_; ++i)
-                for (size_t j = 0; j < cols_; ++j) data_[i][j] *= num;
+                for (size_t j = 0; j < cols_; ++j) tmp.data_[i][j] *= num;
+
+            std::swap(*this, tmp);
             return *this;
         }
 
@@ -243,8 +247,12 @@ namespace matrix {
             if (cols_ != matrix.ncols() || rows_ != matrix.nrows())
                 throw matrix_exceptions::MatrixesAreNotSameSize();
 
+            matrix_t tmp(*this);
+
             for (size_t i = 0; i < rows_; ++i)
-                for (size_t j = 0; j < cols_; ++j) data_[i][j] += matrix.data_[i][j];
+                for (size_t j = 0; j < cols_; ++j) tmp.data_[i][j] += matrix.data_[i][j];
+
+            std::swap(*this, tmp);
             return *this;
         }
 
