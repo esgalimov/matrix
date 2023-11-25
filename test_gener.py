@@ -43,12 +43,12 @@ def random_props():
 
     return row1, row2, koeff
 
-for i in range(900):
+for i in range(750):
     add_rows(*random_props())
     add_cols(*random_props())
 
 
-with open("12.dat", "w") as mtx_file:
+with open("13.dat", "w") as mtx_file:
     print(MATRIX_SIZE, file=mtx_file)
     for i in range(MATRIX_SIZE):
         for j in range(MATRIX_SIZE):
