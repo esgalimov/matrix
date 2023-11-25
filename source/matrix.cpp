@@ -32,8 +32,11 @@ int main() {
     try {
         std::cout << mtx.determinant() << std::endl;
     }
-    catch (const matrix_exceptions::MatrixIsNotSquare& sq_mtx_exc) {
-        std::cerr << sq_mtx_exc.what() << std::endl;
+    catch (std::bad_alloc&) {
+        std::cerr << "Allocation failed" << std::endl;
+    }
+    catch (const std::runtime_error& mtx_exc) {
+        std::cerr << mtx_exc.what() << std::endl;
     }
 
     return 0;

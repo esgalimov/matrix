@@ -1,6 +1,6 @@
 #pragma once
 
-#include <exception>
+#include <stdexcept>
 
 namespace matrix_exceptions {
     struct MatrixIsNotSquare : public std::runtime_error {
@@ -19,7 +19,7 @@ namespace matrix_exceptions {
         MatrixZeroColsOrRows() : std::runtime_error("Matrix has cols_ = 0 or rows_ = 0") {}
     };
 
-    struct MatrixOutOfRange : public std::out_of_range {
-        MatrixOutOfRange() : std::out_of_range("Matrix cols_ or rows_ out of range") {}
+    struct MatrixOutOfRange : public std::runtime_error {
+        MatrixOutOfRange() : std::runtime_error("Matrix cols_ or rows_ out of range") {}
     };
 }

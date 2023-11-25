@@ -224,6 +224,17 @@ TEST(matrix_methods_test, trace_test) {
     ASSERT_EQ(5, matrix1.trace());
 }
 
+TEST(matrix_methods_test, negate_test) {
+    std::vector<int> vec = {1, 2, 3, 4, 5, 6};
+    matrix_t<int> matrix1{2, 3, vec.begin(), vec.end()}, matrix2 = matrix1;
+
+    matrix2.negate();
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 2; ++j)
+            ASSERT_EQ(-matrix1[i][j], matrix2[i][j]);
+}
+
 TEST(matrix_methods_test, det_test) {
     std::vector<int> vec = {1, 2, 3, 4, 5, 6};
     matrix_t<int> matrix1{2, 3, vec.begin(), vec.end()};

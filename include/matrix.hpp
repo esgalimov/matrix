@@ -35,6 +35,8 @@ namespace matrix {
             }
 
         matrix_buffer_t& operator=(matrix_buffer_t&& rhs) noexcept {
+            if (this == &rhs) return *this;
+
             std::swap(buffer_, rhs.buffer_);
             std::swap(data_, rhs.data_);
             std::swap(cols_, rhs.cols_);
@@ -123,6 +125,8 @@ namespace matrix {
 
         matrix_t(matrix_t&& matrix)            = default;
         matrix_t& operator=(matrix_t&& matrix) = default;
+        ~matrix_t()                            = default;
+
 
         matrix_t& operator=(const matrix_t& matrix) {
             matrix_t tmp(matrix);
@@ -140,11 +144,10 @@ namespace matrix {
         }
 
         matrix_t& negate() & {
-            for (size_t i = 0; i < rows_; ++i) {
-                for (size_t j = 0; j < cols_; ++j) {
-                    data_[i][j] *= -1;
-                }
-            }
+            matrix_t tmp(*this);
+            tmp *= -1;
+
+            std::swap(*this, tmp);
             return *this;
         }
 
