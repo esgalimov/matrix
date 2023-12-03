@@ -10,7 +10,7 @@ namespace matrix {
         matrix[row][add_row] = 0;
     }
 
-    size_t find_max_elem_submatrix_row(matrix_t<double>& matrix, size_t start) {
+    size_t find_max_elem_submatrix_row(const matrix_t<double>& matrix, size_t start) {
         size_t i_max = start;
         double max_elem = std::abs(matrix[start][start]), curr = NAN;
 
@@ -23,5 +23,5 @@ namespace matrix {
         }
         return i_max;
     }
-    }
-}
+    };
+};

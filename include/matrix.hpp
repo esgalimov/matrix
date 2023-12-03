@@ -9,12 +9,12 @@
 
 
 namespace matrix {
-    template <typename T = int> class matrix_t;
+    template <typename T = int> requires std::is_arithmetic_v<T> class matrix_t;
 
     namespace detail {
         void add_submatrix_koeff_row(matrix_t<double>& matrix, size_t row, size_t add_row, double koeff = 1.0);
-        size_t find_max_elem_submatrix_row(matrix_t<double>& matrix, size_t start);
-    }
+        size_t find_max_elem_submatrix_row(const matrix_t<double>& matrix, size_t start);
+    };
 
 
     template <typename T> class matrix_buffer_t {
@@ -48,11 +48,11 @@ namespace matrix {
         matrix_buffer_t(size_t cols = 0, size_t rows = 0) : cols_(cols), rows_(rows) {
             if (cols_ * rows_ == 0) throw matrix_exceptions::MatrixZeroColsOrRows();
 
-            buffer_ = static_cast<T*> (::operator new(sizeof(T)  * cols * rows));
-            data_   = static_cast<T**>(::operator new(sizeof(T*) * rows, std::nothrow));
+            buffer_ = new T[cols * rows];
+            data_   = new (std::nothrow) T*[rows];
 
             if (data_ == nullptr) {
-                ::operator delete(buffer_);
+                delete[] buffer_;
                 throw std::bad_alloc();
             }
 
@@ -61,15 +61,15 @@ namespace matrix {
         }
 
         ~matrix_buffer_t() {
-            ::operator delete(buffer_);
-            ::operator delete(data_);
+            delete[] buffer_;
+            delete[] data_;
         }
     };
 
 
-    template <typename T> class matrix_t final : private matrix_buffer_t<T>  {
-        static_assert(std::is_arithmetic<T>(), "Must be arithmetic type in matrix");
-
+    template <typename T>
+        requires std::is_arithmetic_v<T>
+    class matrix_t final : private matrix_buffer_t<T>  {
         using matrix_buffer_t<T>::buffer_;
         using matrix_buffer_t<T>::data_;
         using matrix_buffer_t<T>::cols_;
@@ -272,6 +272,7 @@ namespace matrix {
         }
 
         void dump(std::ostream& os) const {
+        #ifndef NDEBUG
             for (size_t i = 0; i < rows_; ++i) {
                 for (size_t j = 0; j < cols_; ++j) {
                     os << std::setw(9) << data_[i][j] << " ";
@@ -279,6 +280,7 @@ namespace matrix {
                 os << std::endl;
             }
             os << std::endl;
+        #endif
         }
     };
 

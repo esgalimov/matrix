@@ -27,7 +27,7 @@ int main() {
 
     matrix_t<double> mtx{mtx_size, mtx_size, elem_vec.begin(), elem_vec.end()};
 
-    //mtx.dump(std::cout);
+    mtx.dump(std::cout);
 
     try {
         std::cout << mtx.determinant() << std::endl;
