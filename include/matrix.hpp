@@ -4,6 +4,7 @@
 #include <utility>
 #include <iomanip>
 #include <type_traits>
+#include <memory>
 #include "exceptions.hpp"
 #include "double_funcs.hpp"
 
@@ -19,17 +20,16 @@ namespace matrix {
 
     template <typename T> class matrix_buffer_t {
     protected:
-        T*  buffer_;
-        T** data_;
+        std::unique_ptr<T[]>  buffer_;
+        std::unique_ptr<T*[]> data_;
         size_t cols_, rows_;
 
         matrix_buffer_t(const matrix_buffer_t&)            = delete;
         matrix_buffer_t& operator=(const matrix_buffer_t&) = delete;
+        ~matrix_buffer_t()                                 = default;
 
         matrix_buffer_t(matrix_buffer_t&& rhs) noexcept :
-            buffer_(rhs.buffer_), data_(rhs.data_),  cols_(rhs.cols_), rows_(rhs.rows_) {
-                rhs.buffer_ = nullptr;
-                rhs.data_ = nullptr;
+            buffer_(std::move(rhs.buffer_)), data_(std::move(rhs.data_)), cols_(rhs.cols_), rows_(rhs.rows_) {
                 rhs.cols_ = 0;
                 rhs.rows_ = 0;
             }
@@ -48,21 +48,11 @@ namespace matrix {
         matrix_buffer_t(size_t cols = 0, size_t rows = 0) : cols_(cols), rows_(rows) {
             if (cols_ * rows_ == 0) throw matrix_exceptions::MatrixZeroColsOrRows();
 
-            buffer_ = new T[cols * rows];
-            data_   = new (std::nothrow) T*[rows];
-
-            if (data_ == nullptr) {
-                delete[] buffer_;
-                throw std::bad_alloc();
-            }
+            buffer_ = std::make_unique_for_overwrite<T[]>(cols * rows);
+            data_   = std::make_unique_for_overwrite<T*[]>(rows);
 
             for (size_t i = 0; i < rows_; ++i)
                 data_[i] = &buffer_[i * cols_];
-        }
-
-        ~matrix_buffer_t() {
-            delete[] buffer_;
-            delete[] data_;
         }
     };
 
