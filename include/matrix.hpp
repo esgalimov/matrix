@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <type_traits>
 #include <memory>
+#include <algorithm>
 #include "exceptions.hpp"
 #include "double_funcs.hpp"
 
@@ -83,34 +84,24 @@ namespace matrix {
 
     public:
         matrix_t(size_t cols = 1, size_t rows = 1, T val = T{}) : matrix_buffer_t<T>(cols, rows) {
-            for (size_t i = 0; i < rows; ++i)
-                for (size_t j = 0; j < cols; ++j) data_[i][j] = val;
+            std::fill(buffer_.get(), buffer_.get() + rows_ * cols_, val);
         }
 
         template<typename It>
         matrix_t(size_t cols, size_t rows, It start, It fin) : matrix_buffer_t<T>(cols, rows) {
-            for (size_t i = 0; i < rows; ++i) {
-                for (size_t j = 0; j < cols; ++j) {
-                    if (start != fin) {
-                        data_[i][j] = *start;
-                        start++;
-                    }
-                    else data_[i][j] = T{};
-                }
-            }
+            if (std::distance(start, fin) != cols_ * rows_)
+                throw matrix_exceptions::MatrixCtorBadElemCnt();
+
+            std::copy(start, fin, buffer_.get());
         }
 
         matrix_t(const matrix_t& matrix) : matrix_buffer_t<T>(matrix.cols_, matrix.rows_) {
-            for (size_t i = 0; i < rows_; ++i) {
-                for (size_t j = 0; j < cols_; ++j) data_[i][j] = matrix.data_[i][j];
-            }
+            std::copy(matrix.buffer_.get(), matrix.buffer_.get() + cols_ * rows_, buffer_.get());
         }
 
-        template<typename U> explicit
+        template<typename U>
         matrix_t(const matrix_t<U>& matrix) : matrix_buffer_t<T>(matrix.ncols(), matrix.nrows()) {
-            for (size_t i = 0; i < rows_; ++i)
-                for (size_t j = 0; j < cols_; ++j)
-                    data_[i][j] = static_cast<T>(matrix[i][j]);
+            std::copy(&matrix[0][0], &matrix[rows_ - 1][cols_ - 1] + 1, buffer_.get());
         }
 
         matrix_t(matrix_t&& matrix)            = default;
@@ -134,10 +125,7 @@ namespace matrix {
         }
 
         matrix_t& negate() & {
-            matrix_t tmp(*this);
-            tmp *= -1;
-
-            std::swap(*this, tmp);
+            std::for_each(buffer_.get(), buffer_.get() + cols_ * rows_, [](T& elem) { elem *= -1; });
             return *this;
         }
 
@@ -163,7 +151,7 @@ namespace matrix {
                     T elem = 0;
 
                     for (size_t k = 0; k < cols_; ++k)
-                        elem += data_[i][k] * matrix[k][j];
+                        elem += data_[i][k] * matrix.data_[k][j];
 
                     tmp[i][j] = elem;
                 }
@@ -212,11 +200,11 @@ namespace matrix {
 
                 for (size_t row = i + 1; row < rows_; ++row)
                     detail::add_submatrix_koeff_row(matrix, row, i, -1 * matrix[row][i] / matrix[i][i]);
+
+                det *= matrix[i][i];
             }
 
-            for (size_t i = 0; i < rows_; ++i)  det *= matrix[i][i];
-
-            return det;
+            return det * matrix[rows_ - 1][cols_ - 1];
         }
 
     public:
@@ -224,12 +212,8 @@ namespace matrix {
         size_t nrows() const { return rows_; }
 
         matrix_t& operator*=(T num) {
-            matrix_t tmp(*this);
-
-            for (size_t i = 0; i < rows_; ++i)
-                for (size_t j = 0; j < cols_; ++j) tmp.data_[i][j] *= num;
-
-            std::swap(*this, tmp);
+            for (auto start = buffer_.get(), fin = buffer_.get() + cols_ * rows_; start < fin; ++start)
+                *start *= num;
             return *this;
         }
 
@@ -237,21 +221,20 @@ namespace matrix {
             if (cols_ != matrix.ncols() || rows_ != matrix.nrows())
                 throw matrix_exceptions::MatrixesAreNotSameSize();
 
-            matrix_t tmp(*this);
-
-            for (size_t i = 0; i < rows_; ++i)
-                for (size_t j = 0; j < cols_; ++j) tmp.data_[i][j] += matrix.data_[i][j];
-
-            std::swap(*this, tmp);
+            for (auto start = buffer_.get(), fin = buffer_.get() + cols_ * rows_,
+                      src = matrix.buffer_.get(); start < fin; ++start, ++src) {
+                *start += *src;
+            }
             return *this;
         }
 
         bool operator==(const matrix_t& matrix) const {
             if (cols_ != matrix.ncols() || rows_ != matrix.nrows()) return false;
 
-            for (size_t i = 0; i < rows_; ++i)
-                for (size_t j = 0; j < cols_; ++j)
-                    if (!double_funcs::equal(data_[i][j], matrix.data_[i][j])) return false;
+            for (auto start = buffer_.get(), fin = buffer_.get() + cols_ * rows_,
+                      src = matrix.buffer_.get(); start < fin; ++start, ++src) {
+                if (!double_funcs::equal(*start, *src)) return false;
+            }
 
             return true;
         }
@@ -281,14 +264,41 @@ namespace matrix {
     }
 
     template <typename T>
+    matrix_t<T> operator*(matrix_t<T>&& matrix, T num) {
+        matrix *= num;
+        return matrix;
+    }
+
+    template <typename T>
     matrix_t<T> operator*(T num, const matrix_t<T>& matrix) {
         matrix_t<T> tmp{matrix}; tmp *= num;
         return tmp;
     }
 
     template <typename T>
+    matrix_t<T> operator*(T num, matrix_t<T>&& matrix) {
+        matrix *= num;
+        return matrix;
+    }
+
+    template <typename T>
     matrix_t<T> operator+(const matrix_t<T>& mtx1, const matrix_t<T>& mtx2) {
         matrix_t<T> tmp{mtx1}; tmp += mtx2;
         return tmp;
+    }
+
+    template <typename T>
+    matrix_t<T> operator+(matrix_t<T>&& mtx1, const matrix_t<T>& mtx2) {
+        mtx1 += mtx2; return mtx1;
+    }
+
+    template <typename T>
+    matrix_t<T> operator+(const matrix_t<T>& mtx1, matrix_t<T>&& mtx2) {
+        mtx2 += mtx1; return mtx2;
+    }
+
+    template <typename T>
+    matrix_t<T> operator+(matrix_t<T>&& mtx1, matrix_t<T>&& mtx2) {
+        mtx1 += mtx2; return mtx1;
     }
 }

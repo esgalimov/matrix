@@ -22,4 +22,8 @@ namespace matrix_exceptions {
     struct MatrixOutOfRange : public std::runtime_error {
         MatrixOutOfRange() : std::runtime_error("Matrix cols_ or rows_ out of range") {}
     };
+
+    struct MatrixCtorBadElemCnt : public std::runtime_error {
+        MatrixCtorBadElemCnt() : std::runtime_error("Bad number of elements to construct") {}
+    };
 }

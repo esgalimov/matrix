@@ -26,7 +26,7 @@ TEST(ctor_test, zero_cols_rows_test) {
 }
 
 TEST(ctor_test, iterator_test) {
-    std::vector<int> vec = {1, 2, 3, 4};
+    std::vector<int> vec = {1, 2, 3, 4, 5, 6};
 
     matrix_t<int> matrix{3, 2, vec.begin(), vec.end()};
 
@@ -37,8 +37,11 @@ TEST(ctor_test, iterator_test) {
     ASSERT_EQ(2, matrix[0][1]);
     ASSERT_EQ(3, matrix[0][2]);
     ASSERT_EQ(4, matrix[1][0]);
-    ASSERT_EQ(0, matrix[1][1]);
-    ASSERT_EQ(0, matrix[1][2]);
+    ASSERT_EQ(5, matrix[1][1]);
+    ASSERT_EQ(6, matrix[1][2]);
+
+    ASSERT_THROW((matrix_t<int>{3, 3, vec.begin(), vec.end()}),
+                  matrix_exceptions::MatrixCtorBadElemCnt);
 }
 
 TEST(ctor_test, eye_test) {
@@ -219,7 +222,7 @@ TEST(matrix_methods_test, trace_test) {
 
     ASSERT_THROW(matrix1.trace(), matrix_exceptions::MatrixIsNotSquare);
 
-    matrix1 = matrix_t<int>{2, 2, vec.begin(), vec.end()};
+    matrix1 = matrix_t<int>{2, 2, vec.begin(), std::next(vec.begin(), 4)};
 
     ASSERT_EQ(5, matrix1.trace());
 }
@@ -241,7 +244,7 @@ TEST(matrix_methods_test, det_test) {
 
     ASSERT_THROW(matrix1.determinant(), matrix_exceptions::MatrixIsNotSquare);
 
-    matrix1 = matrix_t<int>{2, 2, vec.begin(), vec.end()};
+    matrix1 = matrix_t<int>{2, 2, vec.begin(), std::next(vec.begin(), 4)};
     ASSERT_EQ(-2, matrix1.determinant());
 
     matrix1.transpose();
