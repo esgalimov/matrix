@@ -16,15 +16,10 @@ endif()
 find_package(GTest REQUIRED)
 enable_testing()
 
-add_executable(matrix ${CMAKE_CURRENT_SOURCE_DIR}/source/matrix.cpp
-                      ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
-add_executable(matrix_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit_test/test.cpp
-                           ${CMAKE_CURRENT_SOURCE_DIR}/source/matrix.cpp)
+add_executable(matrix ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+add_executable(matrix_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit_test/test.cpp)
 
 target_link_libraries(matrix_test PRIVATE ${GTEST_LIBRARIES})
-
-#add_executable(matrix_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit_test/test.cpp)
-#add_subdirectory(./tests/unit_test)
 
 target_include_directories(matrix PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(matrix_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

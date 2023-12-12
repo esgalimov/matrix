@@ -11,13 +11,6 @@
 
 
 namespace matrix {
-    template <typename T = int> requires std::is_arithmetic_v<T> class matrix_t;
-
-    namespace detail {
-        void add_submatrix_koeff_row(matrix_t<double>& matrix, size_t row, size_t add_row, double koeff = 1.0);
-        size_t find_max_elem_submatrix_row(const matrix_t<double>& matrix, size_t start);
-    };
-
 
     template <typename T> class matrix_buffer_t {
     protected:
@@ -184,13 +177,34 @@ namespace matrix {
 
     private:
 
+        static void add_submatrix_koeff_row(matrix_t<double>& matrix, size_t row, size_t add_row, double koeff) {
+            for (size_t i = add_row + 1, iend = matrix.ncols(); i < iend; ++i)
+                matrix[row][i] += koeff * matrix[add_row][i];
+
+            matrix[row][add_row] = 0;
+        }
+
+        static size_t find_max_elem_submatrix_row(const matrix_t<double>& matrix, size_t start) {
+            size_t i_max = start;
+            double max_elem = std::abs(matrix[start][start]), curr = NAN;
+
+            for (size_t i = start + 1, iend = matrix.nrows(); i < iend; ++i) {
+                curr = std::abs(matrix[i][start]);
+                if (max_elem < curr) {
+                    i_max = i;
+                    max_elem = curr;
+                }
+            }
+            return i_max;
+        }
+
         double gauss_algorithm() const {
             matrix_t<double> matrix{*this};
 
             double det = 1.0;
 
             for (size_t i = 0; i < cols_ - 1; ++i) {
-                size_t max_elem_row = detail::find_max_elem_submatrix_row(matrix, i);
+                size_t max_elem_row = find_max_elem_submatrix_row(matrix, i);
 
                 if (double_funcs::equal(matrix[max_elem_row][i], 0)) return 0;
                 else if (max_elem_row != i) {
@@ -199,7 +213,7 @@ namespace matrix {
                 }
 
                 for (size_t row = i + 1; row < rows_; ++row)
-                    detail::add_submatrix_koeff_row(matrix, row, i, -1 * matrix[row][i] / matrix[i][i]);
+                    add_submatrix_koeff_row(matrix, row, i, -1 * matrix[row][i] / matrix[i][i]);
 
                 det *= matrix[i][i];
             }
