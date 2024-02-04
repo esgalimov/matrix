@@ -253,7 +253,12 @@ namespace matrix {
             return true;
         }
 
-        proxy_row_t operator[](size_t row) const {
+        proxy_row_t operator[](size_t row) {
+            if (row >= rows_) throw matrix_exceptions::MatrixOutOfRange();
+            return proxy_row_t{data_[row], cols_};
+        }
+
+        const proxy_row_t operator[](size_t row) const {
             if (row >= rows_) throw matrix_exceptions::MatrixOutOfRange();
             return proxy_row_t{data_[row], cols_};
         }
